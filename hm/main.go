@@ -4,7 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/micanzhang/hosts"
+	"github.com/micanzhang/gohosts"
 	"io/ioutil"
 	"os"
 	"runtime"
