@@ -13,6 +13,12 @@ import (
 
 const VERSION = "1.0@dev"
 
+var pathMap map[string]string = map[string]string{
+	"windows": "C:\\Windows\\System32\\drivers\\etc\\hosts",
+	"darwin":  "/etc/hosts",
+	"linux":   "/etc/hosts",
+}
+
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: %s [reddit]\n", os.Args[0])
 	flag.PrintDefaults()
@@ -166,6 +172,7 @@ func listHost(params map[string]string) {
 	// list by ip
 }
 
+// Build Groups object
 func getHost() *hosts.Groups {
 	hostStr, err := loadHostString()
 	if err != nil {
@@ -207,18 +214,17 @@ func getHost() *hosts.Groups {
 	return groups
 }
 
+// Read host of supported platform
 func loadHostString() (string, error) {
-	hostPath := ""
 	paltform := runtime.GOOS
-	if paltform == "darwin" || paltform == "linux" {
-		hostPath = "/etc/hosts"
+	if hostPath, ok := pathMap[paltform]; ok {
+		bytes, err := ioutil.ReadFile(hostPath)
+		if err != nil {
+			return "", err
+		}
+		return string(bytes), nil
 	} else {
 		return "", errors.New("unsupported platform!")
 	}
 
-	bytes, err := ioutil.ReadFile(hostPath)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
 }
