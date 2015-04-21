@@ -7,14 +7,16 @@ import (
 	"github.com/micanzhang/gohosts"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 )
 
 const VERSION = "1.0@dev"
+const PLATFORM = runtime.GOOS
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s [reddit]\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "usage: %s [options]\n", os.Args[0])
 	flag.PrintDefaults()
 	os.Exit(2)
 }
@@ -34,13 +36,20 @@ func main() {
 }
 
 func edit() {
-	cmd := make(map[string]string)
-	cmd["darwin"] = "open -a Emacs /etc/hosts"
-	cmd["linux"] = "emacs /etc/hosts"
-	cmd["win"] = "emasc C:/Windows/System32/driver/etc/hosts"
+	hostFile := "/etc/hosts"
+	if PLATFORM == "win" {
+		hostFile = "C:/Windows/System32/driver/etc/hosts"
+	}
+	//cmd := exec.Command("open", "-a", "/Applications/Emacs.app/Contents/MacOS/Emacs", hostFile)
+	cmd := exec.Command("/usr/bin/vim", hostFile)
+	//cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Println(err)
+	}
 }
 
-func list(params map[string]string) {
+func listHosts(params map[string]string) {
 	groups := getHost()
 	if group, ok := params["group"]; ok {
 		groups = groups.FindByName(group)
@@ -57,9 +66,8 @@ func list(params map[string]string) {
 	fmt.Println(groups)
 }
 
-func enable(params map[string]string) {
+func switchHosts(params map[string]string, enable bool) {
 	groups := getHost()
-	enable := true
 	if name, ok := params["group"]; ok {
 		if ip, ok := params["ip"]; ok {
 			groups.SwitchByIp(ip, enable)
@@ -80,11 +88,16 @@ func enable(params map[string]string) {
 		groups.SwitchByDomain(domain, enable)
 	}
 
-	fmt.Println(groups)
-}
+	if groups != nil {
+		content := groups.String()
+		if err := updateHostString(content); err != nil {
+			fmt.Printf("Error: %v\n", err)
+		} else {
+			fmt.Println(content)
+		}
+	} else {
 
-func disable(params map[string]string) {
-
+	}
 }
 
 func parseCMD() {
@@ -106,9 +119,11 @@ func parseCMD() {
 			case "-h", "--help":
 				action = "help"
 				help()
+				break
 			case "-v", "--version":
 				action = "version"
 				version()
+				break
 			case "-l", "--list", "list":
 				if len(action) == 0 {
 					action = "list"
@@ -117,7 +132,9 @@ func parseCMD() {
 				}
 				break
 			case "-e", "--edit":
+				action = "edit"
 				edit()
+				os.Exit(0)
 			case "-r", "--remove", "remove":
 				if len(action) == 0 {
 					action = "disable"
@@ -142,18 +159,22 @@ func parseCMD() {
 				key = "ip"
 				break
 			default:
-				usage()
+				if action != "" {
+					params["group"] = arg
+				} else {
+					usage()
+				}
 				break
 			}
 		}
 	}
 
 	if action == "disable" {
-		disable(params)
+		switchHosts(params, false)
 	} else if action == "enable" {
-		enable(params)
+		switchHosts(params, true)
 	} else {
-		list(params)
+		listHosts(params)
 	}
 }
 
@@ -209,11 +230,10 @@ func getHost() *hosts.Groups {
 
 func loadHostString() (string, error) {
 	hostPath := ""
-	paltform := runtime.GOOS
-	if paltform == "darwin" || paltform == "linux" {
+	if PLATFORM == "darwin" || PLATFORM == "linux" {
 		hostPath = "/etc/hosts"
 	} else {
-		return "", errors.New("unsupported platform!")
+		return "", errors.New("unsupported PLATFORM!")
 	}
 
 	bytes, err := ioutil.ReadFile(hostPath)
@@ -221,4 +241,9 @@ func loadHostString() (string, error) {
 		return "", err
 	}
 	return string(bytes), nil
+}
+
+func updateHostString(hosts string) error {
+	hostFile := "/etc/hosts"
+	return ioutil.WriteFile(hostFile, []byte(hosts), 0777)
 }

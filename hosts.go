@@ -66,7 +66,7 @@ func (group Group) String() string {
 	for _, host := range group.Items {
 		hosts = append(hosts, host.String())
 	}
-	return fmt.Sprintf("Group: %s\n\t%s\n", group.Name, strings.Join(hosts, "\n\t"))
+	return fmt.Sprintf("#==== %s\n%s\n#====\n", group.Name, strings.Join(hosts, "\n"))
 }
 
 // Check group is none or not
