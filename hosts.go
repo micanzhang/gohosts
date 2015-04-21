@@ -200,7 +200,6 @@ func (groups *Groups) Disable() {
 }
 
 func (groups *Groups) SwitchByName(name string, enable bool) {
-	fmt.Println(name)
 	for _, group := range *groups {
 		if group.Name == name {
 			group.Switch(enable)
