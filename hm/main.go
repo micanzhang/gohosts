@@ -40,9 +40,9 @@ func edit() {
 	if PLATFORM == "win" {
 		hostFile = "C:/Windows/System32/driver/etc/hosts"
 	}
-	//cmd := exec.Command("open", "-a", "/Applications/Emacs.app/Contents/MacOS/Emacs", hostFile)
-	cmd := exec.Command("/usr/bin/vim", hostFile)
-	//cmd.Stdout = os.Stdout
+	cmd := exec.Command("emacs", hostFile)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		fmt.Println(err)
