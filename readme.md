@@ -1,7 +1,7 @@
 gohosts
 ======
 
-go version of command line tool for hosts manager. only support linux,mac OSX, linux.
+go version of command line tool for hosts manager which only support linux,mac OSX, linux.
 
 #Require
 
@@ -12,10 +12,13 @@ go version of command line tool for hosts manager. only support linux,mac OSX, l
 before install, you should allow go to read and write hosts. 
 
 At mac osX, linux, just execute:
+
     $sudo chmod 777 /etc/hosts
-At windows, make sure that go has permession to read and write hosts file which location at "C:\Windows\System32\drivers\etc" directory.
+
+At windows, make sure that go has permession to read and write hosts file which location at **"C:\Windows\System32\drivers\etc"** directory.
 
 Then:
+
     $go get github.com/micanzhang/gohosts/hm
     $go install github.com/micanzhang/gohosts/hm
 
@@ -39,7 +42,7 @@ Result:
 	127.0.0.1        localhost
 	255.255.255.255  broadcasthost
 	::1              localhost
-	#127.0.0.1 test.com
+	#127.0.0.1 		 test.com
 	#====
 
 	$ go -l -d localhost
