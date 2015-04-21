@@ -42,16 +42,17 @@ func main() {
 }
 
 func edit() {
-	hostFile := "/etc/hosts"
-	if PLATFORM == "win" {
-		hostFile = "C:/Windows/System32/driver/etc/hosts"
-	}
-	cmd := exec.Command("emacs", hostFile)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	if hostFile, err := getHostFile(); err == nil {
+		cmd := exec.Command("emacs", hostFile)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Println(err)
+		}
+	} else {
 		fmt.Println(err)
+		os.Exit(2)
 	}
 }
 
@@ -184,15 +185,6 @@ func parseCMD() {
 	}
 }
 
-func listHost(params map[string]string) {
-	groups := getHost()
-	fmt.Println(groups)
-	//list all
-	//list by group
-	// list by domain
-	// list by ip
-}
-
 // Build Groups object
 func getHost() *hosts.Groups {
 	hostStr, err := loadHostString()
@@ -237,20 +229,33 @@ func getHost() *hosts.Groups {
 
 // Read host of supported platform
 func loadHostString() (string, error) {
-	paltform := runtime.GOOS
-	if hostPath, ok := pathMap[paltform]; ok {
-		bytes, err := ioutil.ReadFile(hostPath)
+	if hostFile, err := getHostFile(); err == nil {
+		bytes, err := ioutil.ReadFile(hostFile)
 		if err != nil {
 			return "", err
 		}
 		return string(bytes), nil
 	} else {
-		return "", errors.New("unsupported PLATFORM!")
+		return "", err
 	}
 
 }
 
+//write hosts config to system hosts config file
 func updateHostString(hosts string) error {
-	hostFile := "/etc/hosts"
-	return ioutil.WriteFile(hostFile, []byte(hosts), 0777)
+	if hostFile, err := getHostFile(); err == nil {
+		return ioutil.WriteFile(hostFile, []byte(hosts), 0777)
+	} else {
+		return err
+	}
+}
+
+//Get host file by current os
+func getHostFile() (string, error) {
+	paltform := runtime.GOOS
+	if hostFile, ok := pathMap[paltform]; ok {
+		return hostFile, nil
+	} else {
+		return "", errors.New("unsupported PLATFORM!")
+	}
 }
