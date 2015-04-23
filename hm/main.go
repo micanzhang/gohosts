@@ -99,19 +99,29 @@ func printVersion() {
 }
 
 func editHosts(editor string) {
+	envKey := "HM_EDITOR"
 	if editor == "" {
-		editor = "emacs"
-	}
-	_, err := exec.LookPath(editor)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(2)
+		editor = os.Getenv(envKey)
+		if editor == "" {
+			editor = "emacs"
+		}
+	} else {
+		_, err := exec.LookPath(editor)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
 	}
 	if hostFile, err := getHostFile(); err == nil {
-		cmd := exec.Command(editor, hostFile)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		var cmd *exec.Cmd
+		if PLATFORM == "darwin" && strings.Contains(editor, "/Applications") {
+			cmd = exec.Command("open", "-a", editor, hostFile)
+		} else {
+			cmd = exec.Command(editor, hostFile)
+			cmd.Stdin = os.Stdin
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 		if err := cmd.Run(); err != nil {
 			fmt.Println(err)
 		}

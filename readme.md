@@ -28,7 +28,6 @@ nothing echo means installed succcessfully.
 
 	$ go -h //help 
 	$ go -l //list all hosts 
-	$ go -e [editor] //open emacs to editor hosts file directly
 	$ go -s //enable host config 
 	$ go -r //disable host config 
 
@@ -53,6 +52,14 @@ Result:
 	127.0.0.1        localhost
 	::1              localhost test.com
 	#====
+
+Editor:
+
+You can edit hosts file directly with editor parameter, editor parameter is optional,
+if not editor parameter **emacs** as default editor. also you can set environment variable 
+**HM_EDITOR** to any editor you want use.
+
+    $ go -e [editor] //open emacs to editor hosts file directly
 
     
 #License
