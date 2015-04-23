@@ -37,20 +37,33 @@ func init() {
 	flag.BoolVar(&version, "v", false, "Show Version Number")
 	flag.BoolVar(&version, "version", false, "Show Version Number")
 	flag.BoolVar(&edit, "e", false, "Edit Hosts File Directly")
-	flag.BoolVar(&enable, "s", false, "Enable Hosts")
-	flag.BoolVar(&disable, "r", false, "Disable Hosts")
-	flag.BoolVar(&list, "l", false, "List All Hosts Config by Group Name")
+	flag.BoolVar(&edit, "edit", false, "Edit Hosts File Directly")
 	flag.StringVar(&domain, "d", "", "Filter By Domain")
-	flag.StringVar(&ip, "i", "", "Filter by Ip Address")
-	flag.BoolVar(&help, "h", false, "Usage")
+	flag.StringVar(&domain, "domain", "", "Filter By Domain")
 	flag.StringVar(&group, "g", "", "Filter By Group Name")
+	flag.StringVar(&group, "group", "", "Filter By Group Name")
+	flag.BoolVar(&help, "h", false, "Usage Infomtion")
+	flag.BoolVar(&help, "help", false, "Usage Infomation")
+	flag.StringVar(&ip, "i", "", "Filter by Ip Address")
+	flag.StringVar(&ip, "ip", "", "Filter by Ip Address")
+	flag.BoolVar(&list, "l", false, "List All Hosts Config by Group Name")
+	flag.BoolVar(&list, "list", false, "List All Hosts Config by Group Name")
+	flag.BoolVar(&enable, "s", false, "Enable Hosts")
+	flag.BoolVar(&enable, "enable", false, "Enable Hosts")
+	flag.BoolVar(&disable, "r", false, "Disable Hosts")
+	flag.BoolVar(&disable, "disable", false, "Disable Hosts")
 }
 
 func main() {
+	flag.Usage = usage
 	flag.Parse()
 	args := flag.Args()
+	var arg string
 	if len(args) > 0 {
-		group = args[0]
+		arg = args[0]
+		if group == "" {
+			group = arg
+		}
 	}
 	if help {
 		flag.Usage()
@@ -59,7 +72,7 @@ func main() {
 		printVersion()
 	}
 	if edit {
-		editHosts()
+		editHosts(arg)
 	}
 	params := make(map[string]string)
 	if domain != "" {
@@ -77,11 +90,7 @@ func main() {
 	if enable || disable {
 		switchHosts(params, enable || (disable && false))
 	}
-}
-
-func usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s [options]\n", os.Args[0])
-	os.Exit(2)
+	flag.Usage()
 }
 
 func printVersion() {
@@ -89,9 +98,12 @@ func printVersion() {
 	os.Exit(2)
 }
 
-func editHosts() {
+func editHosts(editor string) {
+	if editor == "" {
+		editor = "emacs"
+	}
 	if hostFile, err := getHostFile(); err == nil {
-		cmd := exec.Command("emacs", hostFile)
+		cmd := exec.Command(editor, hostFile)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -101,6 +113,7 @@ func editHosts() {
 	} else {
 		fmt.Println(err)
 	}
+	os.Exit(2)
 }
 
 func listHosts(params map[string]string) {
@@ -118,6 +131,7 @@ func listHosts(params map[string]string) {
 	}
 
 	fmt.Println(groups)
+	os.Exit(2)
 }
 
 func switchHosts(params map[string]string, enable bool) {
@@ -144,6 +158,7 @@ func switchHosts(params map[string]string, enable bool) {
 			fmt.Println("Hosts Switch Successfully!")
 		}
 	}
+	os.Exit(2)
 }
 
 // Build Groups object
@@ -218,4 +233,33 @@ func getHostFile() (string, error) {
 	} else {
 		return "", errors.New("unsupported PLATFORM!")
 	}
+}
+
+var usageinfo string = `hm is a command line tool for hosts manager.
+
+Usage:
+
+	hm [flags] 
+	
+flags:
+  -e, -edit                 Edit Hosts File Directly
+  -d, -domain               Filter By Domain
+  -g, -group                Filter By Group Name
+  -h, -help                 Usage Infomation
+  -i, -ip                   Filter by Ip Address
+  -l, -list                 List All Hosts Config by Group Name
+  -r, -disable              Disable Hosts
+  -s, -enable               Enable Hosts
+  -v, -version              Show Version Number 
+
+Example:
+    
+	hm -l default
+	
+more help information please refer to https://github.com/micanzhang/gohosts	
+`
+
+func usage() {
+	fmt.Println(usageinfo)
+	os.Exit(2)
 }

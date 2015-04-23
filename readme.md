@@ -28,7 +28,7 @@ nothing echo means installed succcessfully.
 
 	$ go -h //help 
 	$ go -l //list all hosts 
-	$ go -e //open emacs to editor hosts file directly
+	$ go -e [editor] //open emacs to editor hosts file directly
 	$ go -s //enable host config 
 	$ go -r //disable host config 
 
