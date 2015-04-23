@@ -102,6 +102,11 @@ func editHosts(editor string) {
 	if editor == "" {
 		editor = "emacs"
 	}
+	_, err := exec.LookPath(editor)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
 	if hostFile, err := getHostFile(); err == nil {
 		cmd := exec.Command(editor, hostFile)
 		cmd.Stdin = os.Stdin
