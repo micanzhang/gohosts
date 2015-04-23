@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const VERSION = "1.0@dev"
+const VERSION = "0.0.2"
 const PLATFORM = runtime.GOOS
 
 var pathMap map[string]string = map[string]string{
@@ -21,27 +21,75 @@ var pathMap map[string]string = map[string]string{
 	"linux":   "/etc/hosts",
 }
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s [options]\n", os.Args[0])
-	flag.PrintDefaults()
-	os.Exit(2)
-}
+var (
+	version bool
+	edit    bool
+	enable  bool
+	disable bool
+	list    bool
+	domain  string
+	ip      string
+	help    bool
+	group   string
+)
 
-func help() {
-	usage()
-}
-
-func version() {
-	fmt.Printf("%s version %s\n", os.Args[0], VERSION)
-	flag.PrintDefaults()
-	os.Exit(2)
+func init() {
+	flag.BoolVar(&version, "v", false, "Show Version Number")
+	flag.BoolVar(&version, "version", false, "Show Version Number")
+	flag.BoolVar(&edit, "e", false, "Edit Hosts File Directly")
+	flag.BoolVar(&enable, "s", false, "Enable Hosts")
+	flag.BoolVar(&disable, "r", false, "Disable Hosts")
+	flag.BoolVar(&list, "l", false, "List All Hosts Config by Group Name")
+	flag.StringVar(&domain, "d", "", "Filter By Domain")
+	flag.StringVar(&ip, "i", "", "Filter by Ip Address")
+	flag.BoolVar(&help, "h", false, "Usage")
+	flag.StringVar(&group, "g", "", "Filter By Group Name")
 }
 
 func main() {
-	parseCMD()
+	flag.Parse()
+	args := flag.Args()
+	if len(args) > 0 {
+		group = args[0]
+	}
+	if help {
+		flag.Usage()
+	}
+	if version {
+		printVersion()
+	}
+	if edit {
+		editHosts()
+	}
+	params := make(map[string]string)
+	if domain != "" {
+		params["domain"] = domain
+	}
+	if ip != "" {
+		params["ip"] = ip
+	}
+	if group != "" {
+		params["group"] = group
+	}
+	if list {
+		listHosts(params)
+	}
+	if enable || disable {
+		switchHosts(params, enable || (disable && false))
+	}
 }
 
-func edit() {
+func usage() {
+	fmt.Fprintf(os.Stderr, "usage: %s [options]\n", os.Args[0])
+	os.Exit(2)
+}
+
+func printVersion() {
+	fmt.Printf("hm version %s %s/%s\n", VERSION, PLATFORM, runtime.GOARCH)
+	os.Exit(2)
+}
+
+func editHosts() {
 	if hostFile, err := getHostFile(); err == nil {
 		cmd := exec.Command("emacs", hostFile)
 		cmd.Stdin = os.Stdin
@@ -52,7 +100,6 @@ func edit() {
 		}
 	} else {
 		fmt.Println(err)
-		os.Exit(2)
 	}
 }
 
@@ -75,113 +122,27 @@ func listHosts(params map[string]string) {
 
 func switchHosts(params map[string]string, enable bool) {
 	groups := getHost()
+	hasParams := false
 	if name, ok := params["group"]; ok {
-		if ip, ok := params["ip"]; ok {
-			groups.SwitchByIp(ip, enable)
-		} else if domain, ok := params["domain"]; ok {
-			groups.SwitchByDomain(domain, enable)
-		} else {
-			groups.SwitchByName(name, enable)
-		}
-	} else {
-
+		hasParams = true
+		groups.SwitchByName(name, enable)
 	}
-
 	if ip, ok := params["ip"]; ok {
+		hasParams = true
 		groups.SwitchByIp(ip, enable)
 	}
-
 	if domain, ok := params["domain"]; ok {
+		hasParams = true
 		groups.SwitchByDomain(domain, enable)
 	}
-
-	if groups != nil {
-		content := groups.String()
-		if err := updateHostString(content); err != nil {
+	if !hasParams {
+		flag.Usage()
+	} else if groups != nil {
+		if err := updateHostString(groups.String()); err != nil {
 			fmt.Printf("Error: %v\n", err)
 		} else {
-			fmt.Println(content)
+			fmt.Println("Hosts Switch Successfully!")
 		}
-	} else {
-
-	}
-}
-
-func parseCMD() {
-	args := os.Args
-	params := make(map[string]string)
-	if len(args) == 1 {
-		usage()
-	}
-
-	key := ""
-	action := ""
-	//support list, edit, disable, enable, help, version
-	for _, arg := range args[1:] {
-		if len(key) > 0 {
-			params[key] = arg
-			key = ""
-		} else {
-			switch arg {
-			case "-h", "--help":
-				action = "help"
-				help()
-				break
-			case "-v", "--version":
-				action = "version"
-				version()
-				break
-			case "-l", "--list", "list":
-				if len(action) == 0 {
-					action = "list"
-				} else if action != "list" {
-					usage()
-				}
-				break
-			case "-e", "--edit":
-				action = "edit"
-				edit()
-				os.Exit(0)
-			case "-r", "--remove", "remove":
-				if len(action) == 0 {
-					action = "disable"
-				} else if action != "disable" {
-					usage()
-				}
-				break
-			case "-s", "--switch", "switch":
-				if len(action) == 0 {
-					action = "enable"
-				} else if action != "enable" {
-					usage()
-				}
-				break
-			case "-g", "--group":
-				key = "group"
-				break
-			case "-d", "--domain":
-				key = "domain"
-				break
-			case "-i", "--ip":
-				key = "ip"
-				break
-			default:
-				if action != "" {
-					params["group"] = arg
-				} else {
-					usage()
-				}
-				break
-			}
-		}
-	}
-
-	if action == "disable" {
-		switchHosts(params, false)
-	} else if action == "enable" {
-		switchHosts(params, true)
-	} else {
-		listHosts(params)
 	}
 }
 
@@ -219,7 +180,6 @@ func getHost() *hosts.Groups {
 					host.Ip = items[0]
 					host.Domain = items[1:]
 				}
-
 				group.Items = append(group.Items, *host)
 			}
 		}
